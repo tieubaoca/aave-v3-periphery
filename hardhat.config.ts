@@ -1,6 +1,6 @@
 import { HardhatUserConfig } from 'hardhat/types';
 import { accounts } from './helpers/test-wallets';
-import { NETWORKS_RPC_URL } from './helper-hardhat-config';
+import { getEtherscanEndpoints, NETWORKS_RPC_URL } from './helper-hardhat-config';
 
 import '@nomiclabs/hardhat-ethers';
 import '@nomiclabs/hardhat-etherscan';
@@ -11,9 +11,12 @@ import 'hardhat-gas-reporter';
 import 'solidity-coverage';
 import 'hardhat-dependency-compiler';
 import 'hardhat-deploy';
+import { task, subtask } from 'hardhat/config';
 
 import dotenv from 'dotenv';
 dotenv.config({ path: '../.env' });
+
+const TASK_VERIFY_GET_ETHERSCAN_ENDPOINT = 'verify:get-etherscan-endpoint';
 
 const DEFAULT_BLOCK_GAS_LIMIT = 12450000;
 const MAINNET_FORK = process.env.MAINNET_FORK === 'true';
@@ -21,6 +24,28 @@ const TENDERLY_PROJECT = process.env.TENDERLY_PROJECT || '';
 const TENDERLY_USERNAME = process.env.TENDERLY_USERNAME || '';
 const TENDERLY_FORK_NETWORK_ID = process.env.TENDERLY_FORK_NETWORK_ID || '1';
 const REPORT_GAS = process.env.REPORT_GAS === 'true';
+
+const customChains = {
+  '168587773': {
+    chainId: 168587773,
+    urls: {
+      apiURL: 'https://api-sepolia.blastscan.io/api',
+      browserURL: 'https://sepolia.blastscan.io/',
+    },
+  },
+  '81457': {
+    chainId: 81457,
+    urls: {
+      apiURL: 'https://api.blastscan.io/api',
+      browserURL: 'https://blastscan.io/',
+    },
+  },
+};
+
+subtask(TASK_VERIFY_GET_ETHERSCAN_ENDPOINT).setAction(async (_, { network }) => {
+  const chainId = parseInt(await network.provider.send('eth_chainId'), 16);
+  return customChains[chainId].urls;
+});
 
 const mainnetFork = MAINNET_FORK
   ? {
@@ -77,13 +102,20 @@ const config: HardhatUserConfig = {
       allowUnlimitedContractSize: true,
     },
     ganache: {
-      url: 'http://ganache:8545',
+      url: 'http://localhost:8545',
       accounts: {
-        mnemonic: 'fox sight canyon orphan hotel grow hedgehog build bless august weather swarm',
+        mnemonic:
+          'misery, energy, fitness, glove, cook, casual, regret, craft, ship, inspire, lazy, horror',
         path: "m/44'/60'/0'/0",
         initialIndex: 0,
         count: 20,
       },
+    },
+    blastSepolia: {
+      url: 'https://sepolia.blast.io',
+      accounts: process.env.BLAST_SEPOLIA_PRIVATE_KEY
+        ? [process.env.BLAST_SEPOLIA_PRIVATE_KEY]
+        : [],
     },
   },
   mocha: {
@@ -170,6 +202,8 @@ const config: HardhatUserConfig = {
       },
     ],
   },
+  etherscan: {
+    apiKey: 'CT4NB7IQQC5TYKP2MSI8BKUPGIBSTK6JA7y',
+  },
 };
-
 export default config;
